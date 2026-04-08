@@ -4,3 +4,5 @@ pytz
 pyotp
 requests
 yfinance
+logzero
+websocket-client
