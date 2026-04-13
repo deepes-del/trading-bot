@@ -1,0 +1,10 @@
+smartapi-python
+pandas
+pytz
+pyotp
+requests
+fastapi
+uvicorn
+supabase
+passlib[bcrypt]
+websockets==11.0.3
