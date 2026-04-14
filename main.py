@@ -117,6 +117,25 @@ def close_position(smartApi, user_config, reason="MANUAL"):
 running_bots = {}
 bot_lock = threading.Lock()  # Thread-safe access to running_bots
 
+user_logs = {}
+
+def safe_log(message):
+    blocked_words = ["password", "api_key", "totp"]
+    for word in blocked_words:
+        if word in message.lower():
+            return "[SENSITIVE DATA HIDDEN]"
+    return message
+
+def add_log(user_id, message):
+    if user_id not in user_logs:
+        user_logs[user_id] = []
+    # prevent overflow
+    if len(user_logs[user_id]) > 100:
+        user_logs[user_id].pop(0)
+    
+    timestamp = datetime.datetime.now(config.TIMEZONE).strftime("%H:%M:%S")
+    user_logs[user_id].append(f"[{timestamp}] {message}")
+
 
 def start_bot(user_id, user_config):
     """Start a bot for a user. Prevents duplicate instances.
@@ -152,19 +171,24 @@ def start_bot(user_id, user_config):
         }
     
     logging.info(f"[START] Bot started for user: {user_id}")
+    add_log(user_id, "Bot started")
     return True
 
 
 def run_bot(user_config):
+    user_id = user_config.get("user_id")
     index_name = user_config.get("index", "NIFTY")
     logging.info(f"[DEBUG] Selected Index: {index_name}")
     logging.info(f"Initiating {index_name} Real-Time Breakout Bot...")
+    add_log(user_id, f"Initiating {index_name} Real-Time Breakout Bot...")
     
+    add_log(user_id, "Logging into broker...")
     smartApi = login.login()
     if not smartApi:
         return
 
     logging.info("Fetching Master Instruments...")
+    add_log(user_id, "Fetching market data...")
     inst_df = order_manager.get_instrument_list()
     if inst_df.empty:
         logging.error("Failed to load instruments.")
@@ -259,6 +283,7 @@ def run_bot(user_config):
                 sl_active = order_manager.is_sl_order_active(smartApi, sl_id)
                 if not sl_active:
                     logging.info("[MONITOR] SL order has been triggered by broker — position closed.")
+                    add_log(user_config.get("user_id"), "Stop loss triggered — position closed.")
                     reset_position()
                     time.sleep(1)
                     continue
@@ -282,6 +307,7 @@ def run_bot(user_config):
                 # TARGET HIT — exit with profit
                 if opt_ltp >= target:
                     logging.info(f"[TARGET HIT] Option LTP {opt_ltp} >= Target {target}")
+                    add_log(user_config.get("user_id"), f"Target hit! Exiting position at {opt_ltp}")
                     close_position(smartApi, user_config, reason="TARGET_HIT")
             
             # Don't look for new setups while a position is open
@@ -327,6 +353,7 @@ def run_bot(user_config):
                 if setup_valid:
                     logging.info("Setup detected: Previous candle is above EMA")
                     logging.info(f"Waiting for breakdown below: {prev_low}")
+                    add_log(user_config.get("user_id"), f"Setup detected. Waiting for breakdown below: {prev_low}")
                 else:
                     logging.info("No setup: Candle not above EMA")
 
@@ -359,6 +386,7 @@ def run_bot(user_config):
                 if index_ltp < prev_low:
                     logging.info(f"Breakdown detected: LTP {index_ltp} < {prev_low}")
                     logging.info("Executing trade immediately")
+                    add_log(user_config.get("user_id"), f"Breakdown detected: {index_ltp}. Executing trade...")
                     
                     index_sl = prev_high - prev_low
                     
@@ -404,6 +432,7 @@ def run_bot(user_config):
                             
                             if buy_res:
                                 logging.info(f"BUY order placed successfully | Order ID: {buy_res}")
+                                add_log(user_config.get("user_id"), f"Trade executed: BUY order placed for {opt_sym}")
                                 
                                 # Save to Supabase
                                 save_trade(
@@ -462,6 +491,8 @@ def run_bot(user_config):
     
     user_config["is_running"] = False
     logging.info("[BOT] Shutdown complete.")
+    if user_id:
+        add_log(user_id, "Bot stopped")
 
 if __name__ == "__main__":
     user_config = {

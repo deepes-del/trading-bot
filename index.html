@@ -18,6 +18,39 @@
         #message { padding: 10px; margin-top: 10px; border-radius: 4px; }
         .success { background: #d4edda; color: #155724; }
         .error { background: #f8d7da; color: #721c24; }
+
+        #logs-container {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 10px;
+            background: #111;
+            color: #0f0;
+            font-family: monospace;
+        }
+
+        #logs-box {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #333;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .log-entry {
+            opacity: 0;
+            transform: translateY(10px);
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .log-entry.error { color: #ff4c4c; background: transparent; }
+        .log-entry.info { color: #0f0; }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 <body>
@@ -74,6 +107,11 @@
         <button onclick="startBot()">Start Bot</button>
         <button class="stop-btn" onclick="stopBot()">Stop Bot</button>
         <button onclick="logout()" style="background:#6c757d; margin-top:10px;">Logout</button>
+        
+        <div id="logs-container">
+            <h3>📊 Bot Activity</h3>
+            <div id="logs-box"></div>
+        </div>
     </div>
 
     <div id="message" class="hidden"></div>
@@ -179,6 +217,41 @@
                 showMessage("Failed to stop bot", true);
             }
         }
+
+        async function fetchLogs() {
+            const token = localStorage.getItem('session_token');
+            if (!token) return;
+
+            try {
+                const res = await fetch(`/logs?session_token=${token}`);
+                if (!res.ok) return;
+                const data = await res.json();
+
+                const logBox = document.getElementById("logs-box");
+                
+                if (data.logs && data.logs.length > 0) {
+                    const newHtml = data.logs.map(log => {
+                        let logClass = "info";
+                        if (log.toLowerCase().includes("error") || log.toLowerCase().includes("failed") || log.toLowerCase().includes("stop")) {
+                            logClass = "error";
+                        }
+                        return `<div class="log-entry ${logClass}">▶ ${log}</div>`;
+                    }).join("");
+                    
+                    if (logBox.innerHTML !== newHtml) {
+                        logBox.innerHTML = newHtml;
+                        logBox.scrollTop = logBox.scrollHeight;
+                    }
+                } else {
+                    logBox.innerHTML = '<div class="log-entry info">▶ Waiting for logs...</div>';
+                }
+            } catch (e) {
+                console.error("Failed to fetch logs", e);
+            }
+        }
+
+        // refresh every 2 seconds
+        setInterval(fetchLogs, 2000);
     </script>
 </body>
 </html>

@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+from main import start_bot, running_bots
 from auth import register_user, login_user
 
 app = FastAPI()
@@ -84,3 +85,17 @@ def stop_bot_api(session_token: str):
         return {"status": "Stop requested"}
 
     return {"error": "Bot not running"}
+
+
+@app.get("/logs")
+def get_logs(session_token: str):
+    from main import user_logs
+
+    if session_token not in active_sessions:
+        return {"error": "Invalid session"}
+
+    user_id = active_sessions[session_token]["user_id"]
+
+    return {
+        "logs": user_logs.get(user_id, [])
+    }
