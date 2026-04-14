@@ -131,13 +131,27 @@
     </div>
 
     <!-- BOT CONTROL SECTION -->
-    <div id="bot-section" class="box hidden">
-        <h2>Bot Controls</h2>
-        <p>Logged in as: <span id="display-username"></span></p>
+    <div id="bot-section" class="box hidden" style="display: flex; gap: 20px; flex-wrap: wrap;">
+        <!-- LEFT SIDE: RULES -->
+        <div style="flex: 1; min-width: 200px; background: #f4f4f4; border: 1px solid #ccc; padding: 15px; border-radius: 8px;">
+            <h3 style="margin-top:0;">📐 Parameter Rules</h3>
+            <ul id="bot-rules-list" style="list-style-type: none; padding: 0; line-height: 2.2;">
+                <li><strong>Index:</strong> <span id="r-index">NIFTY</span></li>
+                <li><strong>Mode:</strong> <span id="r-mode">Default</span></li>
+                <li><strong>Lots:</strong> <span id="r-lots">1</span></li>
+                <li><strong>Stop Loss:</strong> <span id="r-sl">Dynamic</span></li>
+                <li><strong>Target:</strong> <span id="r-target">Dynamic</span></li>
+            </ul>
+        </div>
 
-        <div class="form-group">
-            <label>Bot Mode</label>
-            <select id="mode" onchange="toggleCustomFields()">
+        <!-- RIGHT SIDE: CONTROLS -->
+        <div style="flex: 2; min-width: 300px;">
+            <h2 style="margin-top:0;">Bot Controls</h2>
+            <p>Logged in as: <span id="display-username"></span></p>
+
+            <div class="form-group">
+                <label>Bot Mode</label>
+                <select id="mode" onchange="toggleCustomFields(); updateRules();">
                 <option value="default">Default (EMA 1:2)</option>
                 <option value="custom">Custom (Fixed SL/Target)</option>
             </select>
@@ -146,22 +160,22 @@
         <div id="custom-fields" class="hidden">
             <div class="form-group">
                 <label>Stop Loss (Points)</label>
-                <input type="number" id="sl" value="10">
+                <input type="number" id="sl" value="10" oninput="updateRules()">
             </div>
             <div class="form-group">
                 <label>Target (Points)</label>
-                <input type="number" id="target" value="20">
+                <input type="number" id="target" value="20" oninput="updateRules()">
             </div>
         </div>
 
         <div class="form-group">
             <label>Lots</label>
-            <input type="number" id="lots" value="1" min="1" max="10">
+            <input type="number" id="lots" value="1" min="1" max="10" step="1" oninput="this.value = this.value.replace(/[^0-9]/g, ''); if(this.value === '') this.value=1; updateRules();">
         </div>
 
         <div class="form-group">
             <label>Index</label>
-            <select id="index">
+            <select id="index" onchange="updateRules()">
                 <option value="NIFTY">NIFTY</option>
                 <option value="BANKNIFTY">BANKNIFTY</option>
             </select>
@@ -171,10 +185,11 @@
         <button class="stop-btn" onclick="stopBot()">Stop Bot</button>
         <button onclick="logout()" style="background:#6c757d; margin-top:10px;">Logout</button>
 
-        <div id="logs-container">
-            <h3>📊 Bot Logs</h3>
-            <div id="logs-box"></div>
-        </div>
+            <div id="logs-container">
+                <h3>📊 Bot Logs</h3>
+                <div id="logs-box"></div>
+            </div>
+        </div> <!-- End right controls -->
     </div>
 
     <div id="message" class="hidden"></div>
@@ -246,14 +261,37 @@
             showMessage("Logged out.");
         }
 
+        function updateRules() {
+            const mode = document.getElementById('mode').value;
+            const sl = document.getElementById('sl').value;
+            const target = document.getElementById('target').value;
+            const index = document.getElementById('index').value;
+            const lots = document.getElementById('lots').value;
+
+            document.getElementById('r-index').textContent = index;
+            document.getElementById('r-mode').textContent = mode === 'custom' ? 'Custom' : 'Default';
+            document.getElementById('r-lots').textContent = lots;
+            document.getElementById('r-sl').textContent = mode === 'custom' ? sl : 'Dynamic';
+            document.getElementById('r-target').textContent = mode === 'custom' ? target : 'Dynamic';
+        }
+
         async function startBot() {
+            const index = document.getElementById('index').value;
+            const mode = document.getElementById('mode').value;
+            const lots = document.getElementById('lots').value;
+            const sl = document.getElementById('sl').value;
+            const target = document.getElementById('target').value;
+            
+            const msg = `START BOT CONFIRMATION\n\nAre you sure you want to deploy with these parameters?\n\nIndex: ${index}\nLots: ${lots}\nMode: ${mode === 'custom' ? `Custom (SL: ${sl}, Target: ${target})` : 'Default (Dynamic SL/Target)'}`;
+            if (!confirm(msg)) return;
+
             const token = localStorage.getItem('session_token');
             const payload = {
-                mode: document.getElementById('mode').value,
-                sl: parseInt(document.getElementById('sl').value),
-                target: parseInt(document.getElementById('target').value),
-                index: document.getElementById('index').value,
-                lots: parseInt(document.getElementById("lots").value)
+                mode: mode,
+                sl: parseInt(sl),
+                target: parseInt(target),
+                index: index,
+                lots: parseInt(lots)
             };
 
             try {
@@ -275,7 +313,12 @@
             try {
                 const res = await fetch(`/stop-bot?session_token=${token}`, { method: 'POST' });
                 const data = await res.json();
-                if (data.status) showMessage(data.status);
+                if (data.status) {
+                    showMessage(data.status);
+                    setTimeout(() => {
+                        document.getElementById("logs-box").innerHTML = "";
+                    }, 1500); // clear UI after final stopped log pulls through
+                }
                 else showMessage(data.error, true);
             } catch (e) {
                 showMessage("Failed to stop bot", true);
