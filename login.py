@@ -11,9 +11,9 @@ def login():
         if data['status']:
             public_ip = "54.253.200.200"
             
-            smartApi.setClientLocalIP("127.0.0.1")
-            smartApi.setClientPublicIP(public_ip)
-            smartApi.setMacAddress("00:00:00:00:00:00")
+            smartApi.clientLocalIp = "127.0.0.1"
+            smartApi.clientPublicIp = public_ip
+            smartApi.clientMacAddress = "00:00:00:00:00:00"
             
             logging.info(f"[DEBUG] Using Public IP: {public_ip}")
             
