@@ -70,49 +70,71 @@ def select_atm_option(smartApi, df_inst, index_ltp, index_name="NIFTY"):
 
 def place_buy_order(smartApi, symboltoken, symbol, qty):
     """Market Buy Order specifically."""
-    try:
-        orderparams = {
-            "variety": "NORMAL",
-            "tradingsymbol": symbol,
-            "symboltoken": symboltoken,
-            "transactiontype": "BUY",
-            "exchange": "NFO",
-            "ordertype": "MARKET",
-            "producttype": "MIS",
-            "duration": "DAY",
-            "price": "0",
-            "squareoff": "0",
-            "stoploss": "0",
-            "quantity": str(qty)
-        }
-        return smartApi.placeOrder(orderparams)
-    except Exception as e:
-        logging.error(f"Buy Order Failed: {e}")
-        return None
+    order = None
+    for attempt in range(3):
+        try:
+            import time
+            time.sleep(0.3)
+            orderparams = {
+                "variety": "NORMAL",
+                "tradingsymbol": symbol,
+                "symboltoken": symboltoken,
+                "transactiontype": "BUY",
+                "exchange": "NFO",
+                "ordertype": "MARKET",
+                "producttype": "MIS",
+                "duration": "DAY",
+                "price": "0",
+                "squareoff": "0",
+                "stoploss": "0",
+                "quantity": str(qty)
+            }
+            order = smartApi.placeOrder(orderparams)
+            if order:
+                break
+        except Exception as e:
+            logging.error(f"Buy Order Failed (Attempt {attempt+1}): {e}")
+            import time
+            time.sleep(1)
+            
+    if not order:
+        raise Exception("Empty response from broker")
+    return order
 
 
 def place_sl_order(smartApi, symboltoken, symbol, qty, trigger_price):
     """Immediately executed STOPLOSS_MARKET order."""
-    try:
-        orderparams = {
-            "variety": "STOPLOSS",
-            "tradingsymbol": symbol,
-            "symboltoken": symboltoken,
-            "transactiontype": "SELL",
-            "exchange": "NFO",
-            "ordertype": "STOPLOSS_MARKET",
-            "producttype": "MIS",
-            "duration": "DAY",
-            "price": "0", 
-            "triggerprice": str(trigger_price),
-            "squareoff": "0",
-            "stoploss": "0",
-            "quantity": str(qty)
-        }
-        return smartApi.placeOrder(orderparams)
-    except Exception as e:
-        logging.error(f"SL Order Failed: {e}")
-        return None
+    order = None
+    for attempt in range(3):
+        try:
+            import time
+            time.sleep(0.3)
+            orderparams = {
+                "variety": "STOPLOSS",
+                "tradingsymbol": symbol,
+                "symboltoken": symboltoken,
+                "transactiontype": "SELL",
+                "exchange": "NFO",
+                "ordertype": "STOPLOSS_MARKET",
+                "producttype": "MIS",
+                "duration": "DAY",
+                "price": "0", 
+                "triggerprice": str(trigger_price),
+                "squareoff": "0",
+                "stoploss": "0",
+                "quantity": str(qty)
+            }
+            order = smartApi.placeOrder(orderparams)
+            if order:
+                break
+        except Exception as e:
+            logging.error(f"SL Order Failed (Attempt {attempt+1}): {e}")
+            import time
+            time.sleep(1)
+            
+    if not order:
+        raise Exception("Empty response from broker")
+    return order
 
 
 # ─────────────────────────────────────────────────────────────
@@ -150,8 +172,11 @@ def cancel_order(smartApi, order_id):
 # ─────────────────────────────────────────────────────────────
 def place_sell_order(smartApi, symboltoken, symbol, qty):
     """Market Sell Order for exiting an open position."""
-    for attempt in range(1, 4):
+    order = None
+    for attempt in range(3):
         try:
+            import time
+            time.sleep(0.3)
             orderparams = {
                 "variety": "NORMAL",
                 "tradingsymbol": symbol,
@@ -166,21 +191,18 @@ def place_sell_order(smartApi, symboltoken, symbol, qty):
                 "stoploss": "0",
                 "quantity": str(qty)
             }
-            res = smartApi.placeOrder(orderparams)
-            if res:
-                logging.info(f"[SELL ORDER] Placed successfully | Order ID: {res}")
-                return res
-            else:
-                logging.warning(f"Sell order returned falsy on attempt {attempt}")
+            order = smartApi.placeOrder(orderparams)
+            if order:
+                logging.info(f"[SELL ORDER] Placed successfully | Order ID: {order}")
+                break
         except Exception as e:
-            logging.error(f"[SELL ORDER] Attempt {attempt} failed: {e}")
-        
-        if attempt < 3:
+            logging.error(f"[SELL ORDER] Attempt {attempt+1} failed: {e}")
             import time
-            time.sleep(0.5)
-    
-    logging.error(f"Failed to place SELL order for {symbol} after 3 attempts.")
-    return None
+            time.sleep(1)
+            
+    if not order:
+        raise Exception("Empty response from broker")
+    return order
 
 
 # ─────────────────────────────────────────────────────────────

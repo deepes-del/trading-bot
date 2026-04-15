@@ -5,6 +5,9 @@ pyotp
 requests
 fastapi
 uvicorn
-supabase
 passlib[bcrypt]
 websockets==11.0.3
+supabase==2.3.4
+gotrue==2.4.2
+httpx==0.24.1
+websockets==10.4

@@ -9,6 +9,16 @@ def login():
         totp = pyotp.TOTP(config.TOTP_SECRET).now()
         data = smartApi.generateSession(config.CLIENT_ID, config.PASSWORD, totp)
         if data['status']:
+            import requests
+            public_ip = requests.get("https://ifconfig.me").text.strip()
+            
+            smartApi._defaultHeaders.update({
+                "X-ClientLocalIP": "127.0.0.1",
+                "X-ClientPublicIP": public_ip,
+                "X-MACAddress": "00:00:00:00:00:00"
+            })
+            print(f"[DEBUG] Using Public IP: {public_ip}")
+            
             logging.info("Broker Login Successful.")
             return smartApi
         else:

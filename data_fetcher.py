@@ -123,10 +123,15 @@ def update_hybrid_ema(global_df, smartApi, exchange, symboltoken, interval="FIVE
     return False, global_df
 
 def get_ltp(smartApi, exchange, symbol, symboltoken):
-    try:
-        res = smartApi.ltpData(exchange, symbol, symboltoken)
-        if res and res.get('status'):
-            return res['data']['ltp']
-    except Exception as e:
-        logging.error(f"Error fetching LTP: {e}")
+    for attempt in range(3):
+        try:
+            import time
+            time.sleep(0.3)
+            res = smartApi.ltpData(exchange, symbol, symboltoken)
+            if res and res.get('status'):
+                return res['data']['ltp']
+        except Exception as e:
+            logging.error(f"Error fetching LTP (Attempt {attempt+1}): {e}")
+            import time
+            time.sleep(1)
     return None
