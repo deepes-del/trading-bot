@@ -9,8 +9,7 @@ def login():
         totp = pyotp.TOTP(config.TOTP_SECRET).now()
         data = smartApi.generateSession(config.CLIENT_ID, config.PASSWORD, totp)
         if data['status']:
-            import requests
-            public_ip = requests.get("https://ifconfig.me").text.strip()
+            public_ip = "54.253.200.200"
             
             smartApi._defaultHeaders.update({
                 "X-ClientLocalIP": "127.0.0.1",
