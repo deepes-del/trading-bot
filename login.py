@@ -9,7 +9,7 @@ def login():
         totp = pyotp.TOTP(config.TOTP_SECRET).now()
         data = smartApi.generateSession(config.CLIENT_ID, config.PASSWORD, totp)
         if data['status']:
-            public_ip = "54.253.200.200"
+            public_ip = "3.107.214.228"
             
             smartApi.clientLocalIp = "127.0.0.1"
             smartApi.clientPublicIp = public_ip
