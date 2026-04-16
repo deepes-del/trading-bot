@@ -8,25 +8,27 @@ def login():
         smartApi = SmartConnect(api_key=config.API_KEY)
         totp = pyotp.TOTP(config.TOTP_SECRET).now()
         data = smartApi.generateSession(config.CLIENT_ID, config.PASSWORD, totp)
+        
         if data['status']:
-            public_ip = "54.253.200.200"
-            
-            public_ip = "3.107.214.228"
             import socket
             import uuid
             import re
             
-            local_ip = socket.gethostbyname(socket.gethostname())
-            mac = ':'.join(re.findall('..', '%012x' % uuid.getnode()))
+            # Use the user-verified static AWS IP
+            public_ip = "3.107.214.228"
             
+            # Fetch local hardware signatures for API compliance
+            local_ip = socket.gethostbyname(socket.gethostname())
+            mac_addr = ':'.join(re.findall('..', '%012x' % uuid.getnode()))
+            
+            # Apply to both possible naming variants in the SmartAPI library
             smartApi.clientLocalIp = local_ip
             smartApi.clientLocalIP = local_ip
             smartApi.clientPublicIp = public_ip
             smartApi.clientPublicIP = public_ip
-            smartApi.clientMacAddress = mac
+            smartApi.clientMacAddress = mac_addr
             
-            logging.info(f"[DEBUG] Using Public IP: {public_ip}")
-            
+            logging.info(f"[DEBUG] SmartAPI Headers: IP={public_ip}, MAC={mac_addr}")
             logging.info("Broker Login Successful.")
             return smartApi
         else:
